@@ -1,0 +1,795 @@
+{
+	"info": {
+		"_postman_id": "43dfb09e-04a6-4aff-93c5-5d73c823591d",
+		"name": "AtlasLogix Assessment API",
+		"description": "Generated from OpenAPI for AtlasLogix Assessment Backend.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12646752"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "v1 auth login create",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Automatic check: validate that token is saved as a collection variable",
+									"pm.test('Login returns token', function () {",
+									"  pm.response.to.have.status(200);",
+									"  const errorStatuses = [400, 401, 403, 404, 409, 500];",
+									"  pm.expect(errorStatuses).to.not.include(pm.response.code);",
+									"  const json = pm.response.json();",
+									"  pm.expect(json.token).to.be.a('string');",
+									"});",
+									"",
+									"//Save Token & Tenant ID (If Exists) as Collection Variables",
+									"try {",
+									"  const json = pm.response.json();",
+									"  if (json.token) {",
+									"    pm.collectionVariables.set('token', json.token);",
+									"    if (json.tenantId) pm.collectionVariables.set('tenantId', json.tenantId);",
+									"  }",
+									"} catch (e) {}",
+									"",
+									"//Extra validation: confirm token is stored in collection variables",
+									"pm.test(\"Token saved to collection variable\", function () {",
+									"  const savedToken = pm.collectionVariables.get(\"token\");",
+									"  pm.expect(savedToken).to.be.a(\"string\").and.not.empty;",
+									"});",
+									"",
+									"//Schema/field existence checks (key fields in login response)",
+									"pm.test(\"Login response has required fields\", function () {",
+									"  const json = pm.response.json();",
+									"  pm.expect(json).to.have.property(\"token\").and.to.be.string;",
+									"  pm.expect(json).to.have.property(\"role\").and.to.be.string;",
+									"  pm.expect(json).to.have.property(\"tenantId\").and.to.be.string;",
+									"  pm.expect(json).to.have.property(\"userId\").and.to.be.string;",
+									"});",
+									"",
+									"//Basic response-time check (threshold: 1500ms)",
+									"pm.test(\"Response time is acceptable\", function () {",
+									"  pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"auditor@atlaslogix.test\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Shipments",
+			"item": [
+				{
+					"name": "v1 shipments retrieve",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Status Code Check\r",
+									"pm.test('Status Code Check', function () {\r",
+									"  pm.response.to.have.status(200);\r",
+									"  const errorStatuses = [400, 401, 403, 404, 409, 500];\r",
+									"  pm.expect(errorStatuses).to.not.include(pm.response.code);\r",
+									"});\r",
+									"\r",
+									"//Response time check (under 1500ms)\r",
+									"pm.test(\"Response time is acceptable\", function () {\r",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);\r",
+									"});\r",
+									"\r",
+									"//Parse JSON\r",
+									"let jsonData = pm.response.json();\r",
+									"\r",
+									"//Field existence checks\r",
+									"pm.test(\"Response contains required fields\", function () {\r",
+									"    pm.expect(jsonData).to.have.property(\"shipmentId\");\r",
+									"    pm.expect(jsonData).to.have.property(\"tenantId\");\r",
+									"    pm.expect(jsonData).to.have.property(\"status\");\r",
+									"    pm.expect(jsonData).to.have.property(\"warehouse\");\r",
+									"    pm.expect(jsonData).to.have.property(\"compliance_status\");\r",
+									"    pm.expect(jsonData).to.have.property(\"last_updated\");\r",
+									"    pm.expect(jsonData).to.have.property(\"locked_at\");\r",
+									"    pm.expect(jsonData).to.have.property(\"approved_by\");\r",
+									"});\r",
+									"\r",
+									"//Field type checks\r",
+									"pm.test(\"Field types are correct\", function () {\r",
+									"    pm.expect(jsonData.shipmentId).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.tenantId).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.status).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.warehouse).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.compliance_status).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.last_updated).to.be.a(\"string\"); // ISO timestamp\r",
+									"    pm.expect(jsonData.locked_at).to.be.a(\"string\");    // ISO timestamp\r",
+									"    pm.expect(jsonData.approved_by).to.be.a(\"string\");\r",
+									"});\r",
+									"\r",
+									"//Business rule checks\r",
+									"pm.test(\"Status must be IN_TRANSIT\", function () {\r",
+									"    pm.expect(jsonData.status).to.eql(\"IN_TRANSIT\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Compliance status must be PENDING\", function () {\r",
+									"    pm.expect(jsonData.compliance_status).to.eql(\"PENDING\");\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/shipments/{{shipmentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"shipments",
+								"{{shipmentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "v1 shipments sensor data retrieve",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Status Code Check\r",
+									"pm.test('Status Code Check', function () {\r",
+									"  pm.response.to.have.status(200);\r",
+									"  const errorStatuses = [400, 401, 403, 404, 409, 500];\r",
+									"  pm.expect(errorStatuses).to.not.include(pm.response.code);\r",
+									"});\r",
+									"\r",
+									"//Response time check (under 1500ms)\r",
+									"pm.test(\"Response time is acceptable\", function () {\r",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);\r",
+									"});\r",
+									"\r",
+									"//Parse JSON\r",
+									"let jsonData = pm.response.json();\r",
+									"\r",
+									"//Field existence checks\r",
+									"pm.test(\"Response contains required fields\", function () {\r",
+									"    pm.expect(jsonData).to.have.property(\"shipmentId\");\r",
+									"    pm.expect(jsonData).to.have.property(\"temperature\");\r",
+									"    pm.expect(jsonData).to.have.property(\"humidity\");\r",
+									"    pm.expect(jsonData).to.have.property(\"confidence\");\r",
+									"    pm.expect(jsonData).to.have.property(\"timestamp\");\r",
+									"});\r",
+									"\r",
+									"//Field type checks\r",
+									"pm.test(\"Field types are correct\", function () {\r",
+									"    pm.expect(jsonData.shipmentId).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.temperature).to.be.a(\"number\");\r",
+									"    pm.expect(jsonData.humidity).to.be.a(\"number\");\r",
+									"    pm.expect(jsonData.confidence).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.timestamp).to.be.a(\"string\"); // ISO timestamp\r",
+									"});\r",
+									"\r",
+									"//Business rule checks\r",
+									"pm.test(\"Temperature value should be within realistic range\", function () {\r",
+									"    pm.expect(jsonData.temperature).to.be.within(-50, 100); // Celsius range\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Humidity value should be within 0–100%\", function () {\r",
+									"    pm.expect(jsonData.humidity).to.be.within(0, 100);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Confidence field should not be empty\", function () {\r",
+									"    pm.expect(jsonData.confidence.length).to.be.greaterThan(0);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/shipments/{{shipmentId}}/sensor-data",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"shipments",
+								"{{shipmentId}}",
+								"sensor-data"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "v1 tenants shipments list",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Status Code Check\r",
+									"pm.test('Status Code Check', function () {\r",
+									"  pm.response.to.have.status(200);\r",
+									"  const errorStatuses = [400, 401, 403, 404, 409, 500];\r",
+									"  pm.expect(errorStatuses).to.not.include(pm.response.code);\r",
+									"});\r",
+									"\r",
+									"//Response time check (under 1500ms)\r",
+									"pm.test(\"Response time is acceptable\", function () {\r",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);\r",
+									"});\r",
+									"\r",
+									"//Parse JSON\r",
+									"let jsonData = pm.response.json();\r",
+									"\r",
+									"//Top-level field existence checks\r",
+									"pm.test(\"Response contains pagination fields\", function () {\r",
+									"    pm.expect(jsonData).to.have.property(\"count\");\r",
+									"    pm.expect(jsonData).to.have.property(\"next\");\r",
+									"    pm.expect(jsonData).to.have.property(\"previous\");\r",
+									"    pm.expect(jsonData).to.have.property(\"results\");\r",
+									"});\r",
+									"\r",
+									"//Type checks for pagination\r",
+									"pm.test(\"Pagination fields are correct types\", function () {\r",
+									"    pm.expect(jsonData.count).to.be.a(\"number\");\r",
+									"    pm.expect(typeof jsonData.next === \"string\" || jsonData.next === null).to.be.true;\r",
+									"    pm.expect(typeof jsonData.previous === \"string\" || jsonData.previous === null).to.be.true;\r",
+									"    pm.expect(jsonData.results).to.be.an(\"array\");\r",
+									"});\r",
+									"\r",
+									"//Shipment object schema checks\r",
+									"if (jsonData.results && jsonData.results.length > 0) {\r",
+									"    let shipment = jsonData.results[0];\r",
+									"\r",
+									"    pm.test(\"Shipment object contains required fields\", function () {\r",
+									"        pm.expect(shipment).to.have.property(\"shipmentId\");\r",
+									"        pm.expect(shipment).to.have.property(\"tenantId\");\r",
+									"        pm.expect(shipment).to.have.property(\"status\");\r",
+									"        pm.expect(shipment).to.have.property(\"warehouse\");\r",
+									"        pm.expect(shipment).to.have.property(\"compliance_status\");\r",
+									"        pm.expect(shipment).to.have.property(\"last_updated\");\r",
+									"        pm.expect(shipment).to.have.property(\"locked_at\");\r",
+									"        pm.expect(shipment).to.have.property(\"approved_by\");\r",
+									"    });\r",
+									"\r",
+									"    pm.test(\"Shipment field types are correct\", function () {\r",
+									"        pm.expect(shipment.shipmentId).to.be.a(\"string\");\r",
+									"        pm.expect(shipment.tenantId).to.be.a(\"string\");\r",
+									"        pm.expect(shipment.status).to.be.a(\"string\");\r",
+									"        pm.expect(shipment.warehouse).to.be.a(\"string\");\r",
+									"        pm.expect(shipment.compliance_status).to.be.a(\"string\");\r",
+									"        pm.expect(shipment.last_updated).to.be.a(\"string\"); // ISO timestamp\r",
+									"        pm.expect(shipment.locked_at).to.be.a(\"string\");    // ISO timestamp\r",
+									"        pm.expect(shipment.approved_by).to.be.a(\"string\");\r",
+									"    });\r",
+									"\r",
+									"    //Business rule checks\r",
+									"    pm.test(\"Shipment status must be IN_TRANSIT or valid lifecycle state\", function () {\r",
+									"        pm.expect([\"IN_TRANSIT\", \"AT_WAREHOUSE\", \"COMPLETED\"]).to.include(shipment.status);\r",
+									"    });\r",
+									"\r",
+									"    pm.test(\"Compliance status must be PENDING until shipment is completed and approved\", function () {\r",
+									"        if (shipment.status !== \"COMPLETED\") {\r",
+									"            pm.expect(shipment.compliance_status).to.eql(\"PENDING\");\r",
+									"        }\r",
+									"    });\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/shipments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"tenants",
+								"{{tenantId}}",
+								"shipments"
+							],
+							"query": [
+								{
+									"key": "compliance_status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "ordering",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "warehouse",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Compliance",
+			"item": [
+				{
+					"name": "v1 shipments compliance approve create",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Status Code Check\r",
+									"pm.test('Status Code Check', function () {\r",
+									"  pm.response.to.have.status(200);\r",
+									"  const errorStatuses = [400, 401, 403, 404, 409, 500];\r",
+									"  pm.expect(errorStatuses).to.not.include(pm.response.code);\r",
+									"});\r",
+									"\r",
+									"//Response time check\r",
+									"pm.test(\"Response time is acceptable\", function () {\r",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);\r",
+									"});\r",
+									"\r",
+									"//Parse JSON\r",
+									"let jsonData = pm.response.json();\r",
+									"\r",
+									"//Field existence checks\r",
+									"pm.test(\"Response contains required fields\", function () {\r",
+									"    pm.expect(jsonData).to.have.property(\"shipmentId\");\r",
+									"    pm.expect(jsonData).to.have.property(\"tenantId\");\r",
+									"    pm.expect(jsonData).to.have.property(\"status\");\r",
+									"    pm.expect(jsonData).to.have.property(\"warehouse\");\r",
+									"    pm.expect(jsonData).to.have.property(\"compliance_status\");\r",
+									"    pm.expect(jsonData).to.have.property(\"last_updated\");\r",
+									"    pm.expect(jsonData).to.have.property(\"locked_at\");\r",
+									"    pm.expect(jsonData).to.have.property(\"approved_by\");\r",
+									"});\r",
+									"\r",
+									"//Field type checks\r",
+									"pm.test(\"Field types are correct\", function () {\r",
+									"    pm.expect(jsonData.shipmentId).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.tenantId).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.status).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.warehouse).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.compliance_status).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.last_updated).to.be.a(\"string\"); // ISO timestamp\r",
+									"    pm.expect(jsonData.locked_at).to.be.a(\"string\");    // ISO timestamp\r",
+									"    pm.expect(jsonData.approved_by).to.be.a(\"string\");\r",
+									"});\r",
+									"\r",
+									"//Business rule checks\r",
+									"pm.test(\"Compliance approval business rules enforced\", function () {\r",
+									"    if (jsonData.status === \"COMPLETED\") {\r",
+									"        // If shipment is completed, compliance_status should be APPROVED\r",
+									"        pm.expect(jsonData.compliance_status).to.eql(\"APPROVED\");\r",
+									"    } else {\r",
+									"        // If shipment is not completed, compliance_status must remain PENDING\r",
+									"        pm.expect(jsonData.compliance_status).to.eql(\"PENDING\");\r",
+									"    }\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/shipments/{{shipmentId}}/compliance/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"shipments",
+								"{{shipmentId}}",
+								"compliance",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "v1 shipments compliance report retrieve",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Status Code Check\r",
+									"pm.test('Status Code Check', function () {\r",
+									"  pm.response.to.have.status(200);\r",
+									"  const errorStatuses = [400, 401, 403, 404, 409, 500];\r",
+									"  pm.expect(errorStatuses).to.not.include(pm.response.code);\r",
+									"});\r",
+									"\r",
+									"//Response time check\r",
+									"pm.test(\"Response time is acceptable\", function () {\r",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);\r",
+									"});\r",
+									"\r",
+									"//Parse JSON\r",
+									"let jsonData = pm.response.json();\r",
+									"\r",
+									"//Field existence checks\r",
+									"pm.test(\"Response contains required fields\", function () {\r",
+									"    pm.expect(jsonData).to.have.property(\"shipmentId\");\r",
+									"    pm.expect(jsonData).to.have.property(\"complianceStatus\");\r",
+									"    pm.expect(jsonData).to.have.property(\"sensorConfidence\");\r",
+									"    pm.expect(jsonData).to.have.property(\"generatedAt\");\r",
+									"});\r",
+									"\r",
+									"//Field type checks\r",
+									"pm.test(\"Field types are correct\", function () {\r",
+									"    pm.expect(jsonData.shipmentId).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.complianceStatus).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.sensorConfidence).to.be.a(\"string\");\r",
+									"    pm.expect(jsonData.generatedAt).to.be.a(\"string\"); // ISO timestamp\r",
+									"});\r",
+									"\r",
+									"//Business rule checks\r",
+									"pm.test(\"Compliance status must reflect latest approval state\", function () {\r",
+									"    pm.expect([\"PENDING\", \"APPROVED\"]).to.include(jsonData.complianceStatus);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Sensor confidence must not be empty\", function () {\r",
+									"    pm.expect(jsonData.sensorConfidence.length).to.be.greaterThan(0);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"GeneratedAt must be a valid ISO timestamp\", function () {\r",
+									"    const date = new Date(jsonData.generatedAt);\r",
+									"    pm.expect(date.toString()).not.to.eql(\"Invalid Date\");\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/shipments/{{shipmentId}}/compliance/report",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"shipments",
+								"{{shipmentId}}",
+								"compliance",
+								"report"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Audit Logs",
+			"item": [
+				{
+					"name": "v1 audit logs retrieve",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Status Code Check\r",
+									"pm.test('Status Code Check', function () {\r",
+									"  pm.response.to.have.status(200);\r",
+									"  const errorStatuses = [400, 401, 403, 404, 409, 500];\r",
+									"  pm.expect(errorStatuses).to.not.include(pm.response.code);\r",
+									"});\r",
+									"\r",
+									"//Response time check\r",
+									"pm.test(\"Response time is acceptable\", function () {\r",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);\r",
+									"});\r",
+									"\r",
+									"//Parse JSON\r",
+									"let jsonData = pm.response.json();\r",
+									"\r",
+									"//Field existence checks\r",
+									"pm.test(\"Response contains data array\", function () {\r",
+									"    pm.expect(jsonData).to.have.property(\"data\");\r",
+									"    pm.expect(jsonData.data).to.be.an(\"array\");\r",
+									"});\r",
+									"\r",
+									"//Validate first audit log entry if exists\r",
+									"if (jsonData.data.length > 0) {\r",
+									"    let logEntry = jsonData.data[0];\r",
+									"\r",
+									"    pm.test(\"Audit log entry contains required fields\", function () {\r",
+									"        pm.expect(logEntry).to.have.property(\"entity\");\r",
+									"        pm.expect(logEntry).to.have.property(\"entity_id\");\r",
+									"        pm.expect(logEntry).to.have.property(\"field\");\r",
+									"        pm.expect(logEntry).to.have.property(\"before\");\r",
+									"        pm.expect(logEntry).to.have.property(\"after\");\r",
+									"        pm.expect(logEntry).to.have.property(\"changed_by\");\r",
+									"        pm.expect(logEntry).to.have.property(\"timestamp\");\r",
+									"    });\r",
+									"\r",
+									"    //Type checks\r",
+									"    pm.test(\"Audit log field types are correct\", function () {\r",
+									"        pm.expect(logEntry.entity).to.be.a(\"string\");\r",
+									"        pm.expect(logEntry.entity_id).to.be.a(\"string\");\r",
+									"        pm.expect(logEntry.field).to.be.a(\"string\");\r",
+									"        pm.expect(logEntry.before).to.be.a(\"string\");\r",
+									"        pm.expect(logEntry.after).to.be.a(\"string\");\r",
+									"        pm.expect(logEntry.changed_by).to.be.a(\"string\");\r",
+									"        pm.expect(logEntry.timestamp).to.be.a(\"string\"); // ISO timestamp\r",
+									"    });\r",
+									"\r",
+									"    //Business rule checks\r",
+									"    pm.test(\"Audit log entity must be shipment\", function () {\r",
+									"        pm.expect(logEntry.entity).to.eql(\"shipment\");\r",
+									"    });\r",
+									"\r",
+									"    pm.test(\"Audit log must capture before/after change\", function () {\r",
+									"        pm.expect(logEntry.before).not.to.eql(logEntry.after);\r",
+									"    });\r",
+									"\r",
+									"    pm.test(\"Audit log timestamp must be valid ISO date\", function () {\r",
+									"        const date = new Date(logEntry.timestamp);\r",
+									"        pm.expect(date.toString()).not.to.eql(\"Invalid Date\");\r",
+									"    });\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/audit-logs?entity=shipment&entityId={{shipmentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"audit-logs"
+							],
+							"query": [
+								{
+									"key": "entity",
+									"value": "shipment"
+								},
+								{
+									"key": "entityId",
+									"value": "{{shipmentId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Streams",
+			"item": [
+				{
+					"name": "v1 stream sensor data retrieve",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Status Code Check\r",
+									"pm.test('Status Code Check', function () {\r",
+									"  pm.response.to.have.status(200);\r",
+									"  const errorStatuses = [400, 401, 403, 404, 409, 500];\r",
+									"  pm.expect(errorStatuses).to.not.include(pm.response.code);\r",
+									"});\r",
+									"\r",
+									"//Response time check\r",
+									"pm.test(\"Response time is acceptable\", function () {\r",
+									"    pm.expect(pm.response.responseTime).to.be.below(2500); // streaming can be slightly slower\r",
+									"});\r",
+									"\r",
+									"//Parse Text\r",
+									"let raw = pm.response.text();\r",
+									"\r",
+									"// Split lines\r",
+									"let lines = raw.split(\"\\n\");\r",
+									"\r",
+									"// Find the line starting with \"data:\"\r",
+									"let dataLine = lines.find(l => l.startsWith(\"data:\"));\r",
+									"\r",
+									"if (dataLine) {\r",
+									"    let jsonData = JSON.parse(dataLine.replace(\"data: \", \"\"));\r",
+									"\r",
+									"    pm.test(\"ShipmentId exists\", function () {\r",
+									"        pm.expect(jsonData).to.have.property(\"shipmentId\");\r",
+									"    });\r",
+									"\r",
+									"    pm.test(\"Temperature within realistic range\", function () {\r",
+									"        pm.expect(jsonData.temperature).to.be.within(-50, 100);\r",
+									"    });\r",
+									"\r",
+									"    pm.test(\"Humidity within 0–100%\", function () {\r",
+									"        pm.expect(jsonData.humidity).to.be.within(0, 100);\r",
+									"    });\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/stream/sensor-data",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stream",
+								"sensor-data"
+							],
+							"query": [
+								{
+									"key": "interval",
+									"value": "3",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://nexus-atlaslogix-assessment.vast-soft.com"
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "tenantId",
+			"value": "TENANT-01"
+		},
+		{
+			"key": "shipmentId",
+			"value": "SHIP-8841"
+		}
+	]
+}
